@@ -75,4 +75,4 @@ Use Cursor to analyze the current codebase and generate a well-structured `READM
 Fill out `week2/writeup.md` according to the instructions provided. Make sure all your changes are documented in your codebase. 
 
 ## Evaluation rubric (100 pts total)
-- 20 points per part 1-5 (10 for the generated code and 10 for each prompt).
+- 20 points per part 1-5 (10 for the generated code and 10 for each prompt).    
