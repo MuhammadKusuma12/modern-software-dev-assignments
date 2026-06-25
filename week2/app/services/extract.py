@@ -1,14 +1,12 @@
 from __future__ import annotations
 
-import os
 import re
 from typing import List
-import json
-from typing import Any
-from ollama import chat
-from dotenv import load_dotenv
 
-load_dotenv()
+from ollama import chat
+
+from ..config import get_settings
+from ..schemas import ActionItemsLLMResult
 
 BULLET_PREFIX_PATTERN = re.compile(r"^\s*([-*•]|\d+\.)\s+")
 KEYWORD_PREFIXES = (
@@ -54,16 +52,7 @@ def extract_action_items(text: str) -> List[str]:
                 continue
             if _looks_imperative(s):
                 extracted.append(s)
-    # Deduplicate while preserving order
-    seen: set[str] = set()
-    unique: List[str] = []
-    for item in extracted:
-        lowered = item.lower()
-        if lowered in seen:
-            continue
-        seen.add(lowered)
-        unique.append(item)
-    return unique
+    return _dedupe_preserve_order(extracted)
 
 
 def _looks_imperative(sentence: str) -> bool:
@@ -87,3 +76,61 @@ def _looks_imperative(sentence: str) -> bool:
         "investigate",
     }
     return first.lower() in imperative_starters
+
+
+def _dedupe_preserve_order(items: List[str]) -> List[str]:
+    """Remove duplicate action items while preserving original order."""
+    seen: set[str] = set()
+    unique: List[str] = []
+    for item in items:
+        lowered = item.lower()
+        if lowered in seen:
+            continue
+        seen.add(lowered)
+        unique.append(item)
+    return unique
+
+
+# --- LLM-powered extraction (Exercise 1) ---
+
+
+def extract_action_items_llm(text: str) -> List[str]:
+    """
+    Extract action items from free-form notes using an Ollama LLM with structured JSON output.
+
+    Uses Pydantic schema enforcement via Ollama's `format` parameter so the model returns
+    a predictable JSON object: {"items": ["...", ...]}.
+    """
+    stripped = text.strip()
+    if not stripped:
+        return []
+
+    settings = get_settings()
+    response = chat(
+        model=settings.ollama_model,
+        messages=[
+            {
+                "role": "system",
+                "content": (
+                    "You extract actionable tasks from meeting notes and free-form text. "
+                    "Return only concrete, imperative action items as a JSON object with an "
+                    "'items' array of strings. Strip bullet markers, checkboxes, and prefixes "
+                    "like 'todo:' from each item. Ignore narrative or descriptive sentences "
+                    "that are not tasks."
+                ),
+            },
+            {
+                "role": "user",
+                "content": (
+                    "Extract all action items from the notes below. Return as JSON.\n\n"
+                    f"{stripped}"
+                ),
+            },
+        ],
+        format=ActionItemsLLMResult.model_json_schema(),
+        options={"temperature": 0},
+    )
+
+    result = ActionItemsLLMResult.model_validate_json(response.message.content)
+    cleaned = [item.strip() for item in result.items if item.strip()]
+    return _dedupe_preserve_order(cleaned)

@@ -15,7 +15,15 @@ Keep the implementation minimal.
 """
 
 # TODO: Fill this in!
-YOUR_REFLEXION_PROMPT = ""
+YOUR_REFLEXION_PROMPT = """You are a coding assistant. Your previous implementation failed some test cases.
+
+You will be shown:
+- Your previous code
+- The failing test cases with expected vs actual results and reasons for failure
+
+Fix the implementation so that ALL tests pass. Do NOT add any prose, comments, or explanations.
+Output ONLY a single fenced Python code block with the corrected function. Keep it minimal."""
+
 
 
 # Ground-truth test suite used to evaluate generated code
@@ -92,11 +100,13 @@ def generate_initial_function(system_prompt: str) -> str:
 
 
 def your_build_reflexion_context(prev_code: str, failures: List[str]) -> str:
-    """TODO: Build the user message for the reflexion step using prev_code and failures.
-
-    Return a string that will be sent as the user content alongside the reflexion system prompt.
-    """
-    return ""
+    failure_details = "\n".join(f"  - {f}" for f in failures)
+    return (
+        "Previous code:\n"
+        f"{prev_code}\n\n"
+        f"Failing tests:\n{failure_details}\n\n"
+        "Fix the code so all tests pass. Output ONLY a single fenced Python code block."
+    )
 
 
 def apply_reflexion(

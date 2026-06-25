@@ -10,6 +10,9 @@ from ..schemas import ActionItemCreate, ActionItemPatch, ActionItemRead
 
 router = APIRouter(prefix="/action-items", tags=["action_items"])
 
+# Allowlist of safe sort fields to prevent attribute injection
+SAFE_SORT_FIELDS = {"created_at", "updated_at", "description", "completed", "id"}
+
 
 @router.get("/", response_model=list[ActionItemRead])
 def list_items(
@@ -25,7 +28,7 @@ def list_items(
 
     sort_field = sort.lstrip("-")
     order_fn = desc if sort.startswith("-") else asc
-    if hasattr(ActionItem, sort_field):
+    if sort_field in SAFE_SORT_FIELDS:
         stmt = stmt.order_by(order_fn(getattr(ActionItem, sort_field)))
     else:
         stmt = stmt.order_by(desc(ActionItem.created_at))
@@ -68,5 +71,3 @@ def patch_item(item_id: int, payload: ActionItemPatch, db: Session = Depends(get
     db.flush()
     db.refresh(item)
     return ActionItemRead.model_validate(item)
-
-

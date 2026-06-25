@@ -70,7 +70,13 @@ TOOL_REGISTRY: Dict[str, Callable[..., str]] = {
 # ==========================
 
 # TODO: Fill this in!
-YOUR_SYSTEM_PROMPT = ""
+YOUR_SYSTEM_PROMPT = """You are a tool-calling assistant. You must output a single JSON object for a tool call.
+
+Available tool:
+- output_every_func_return_type: Return a newline-delimited list of "name: return_type" pairs for each top-level function in a Python file. Accepts argument file_path (string).
+
+Output exactly this JSON format (no prose, no code fences):
+{"tool": "output_every_func_return_type", "args": {"file_path": "week1/tool_calling.py"}}"""
 
 
 def resolve_path(p: str) -> str:
